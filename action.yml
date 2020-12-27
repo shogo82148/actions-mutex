@@ -1,0 +1,29 @@
+name: 'actions-mutex'
+description: 'A GitHub Action for exclusive control'
+inputs:
+  token:
+    description: 'GitHub Token. It must have a write access to the repository.'
+    required: true
+    default: '${{ github.token }}'
+  key:
+    description: 'The name of the critical section'
+    required: true
+    default: 'lock'
+  repository:
+    description: 'A repository for locking'
+    required: true
+    default: '${{ github.repository }}'
+  prefix:
+    description: 'Prefix of branch names for locking'
+    required: true
+    default: 'actions-mutex-lock/'
+
+runs:
+  using: "node12"
+  main: "lib/index.js"
+  post: "lib/cleanup.js"
+  post-if: "always()"
+
+branding:
+  icon: 'lock'
+  color: 'gray-dark'
