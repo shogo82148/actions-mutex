@@ -67,6 +67,7 @@ describe('locking', () => {
 
     // unlock
     await exec.exec('git', ['push', '--delete', 'origin', 'actions-mutex-lock/lock'], execOption)
+    io.rmRF(local)
 
     await lockPromise
     expect(locked).toBe(true)
