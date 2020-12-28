@@ -68,12 +68,19 @@ DO NOT TOUCH this branch manually.
   await exec.exec('git', ['add', '.'], execOption)
   await exec.exec('git', ['commit', '-m', 'add lock files'], execOption)
 
+  let sleepSec: number = 1
   for (;;) {
     const locked = await tryLock(local, branch)
     if (locked) {
       break
     }
-    utils.sleep(1)
+    await utils.sleep(sleepSec + Math.random())
+
+    // exponential back off
+    sleepSec *= 2
+    if (sleepSec > 30) {
+      sleepSec = 30
+    }
   }
 
   // cleanup
