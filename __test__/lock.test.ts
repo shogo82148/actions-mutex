@@ -21,5 +21,16 @@ describe('locking', () => {
       key: 'lock',
       prefix: 'actions-mutex-lock/'
     })
+
+    let output: string = ''
+    await exec.exec('git', ['-C', remote, 'branch'], {
+      listeners: {
+        stdout: (data: Buffer) => {
+          output += data.toString()
+        }
+      }
+    })
+
+    expect(output.trim()).toBe('actions-mutex-lock/lock')
   })
 })

@@ -1,5 +1,7 @@
 import * as exec from '@actions/exec'
 import * as io from '@actions/io'
+import * as fs from 'fs/promises'
+import * as path from 'path'
 import * as utils from './utils'
 
 export interface lockOptions {
@@ -40,18 +42,40 @@ export async function lock(options: lockOptions): Promise<lockResult> {
     ])
   }
 
-  await exec.exec('git', ['-C', local, 'switch', '-c', branch])
+  const data = `# Lock File for actions-mutex
 
-  console.log(locker)
+This branch contains lock file for [actions-mutex](https://github.com/shogo82148/actions-mutex).
+DO NOT TOUCH this branch manually.
+`
+  await fs.writeFile(path.join(local, 'README.md'), data)
 
-  // cleanup
-  io.rmRF(local)
-
-  return {
+  const state = {
     locker,
     origin,
     branch
   }
+  await fs.writeFile(path.join(local, 'state.json'), JSON.stringify(state))
+
+  await exec.exec('git', ['-C', local, 'add', '.'])
+
+  // configure user information
+  await exec.exec('git', ['-C', local, 'config', '--local', 'user.name', 'github-actions[bot]'])
+  await exec.exec('git', [
+    '-C',
+    local,
+    'config',
+    '--local',
+    'user.email',
+    '1898282+github-actions[bot]@users.noreply.github.com'
+  ])
+
+  await exec.exec('git', ['-C', local, 'commit', '-m', 'add lock files'])
+  await exec.exec('git', ['-C', local, 'push', 'origin', `HEAD:${branch}`])
+
+  // cleanup
+  io.rmRF(local)
+
+  return state
 }
 
 export async function unlock(): Promise<void> {}
