@@ -1,6 +1,6 @@
 import * as exec from '@actions/exec'
 import * as io from '@actions/io'
-import * as fs from 'fs/promises'
+import {promises as fs} from 'fs'
 import * as path from 'path'
 import * as utils from './utils'
 
@@ -26,20 +26,20 @@ export async function lock(options: lockOptions): Promise<lockResult> {
     // it looks that GitHub repository
     origin = `https://github.com/${origin}`
   }
+  const execOption = {
+    cwd: local
+  }
 
-  await exec.exec('git', ['init', local])
-  await exec.exec('git', ['-C', local, 'remote', 'add', 'origin', origin])
+  await exec.exec('git', ['init', local], execOption)
+  await exec.exec('git', ['remote', 'add', 'origin', origin], execOption)
 
   if (options.token) {
     // configure authorize header
-    await exec.exec('git', [
-      '-C',
-      local,
-      'config',
-      '--local',
-      'http.https://github.com/.extraheader',
-      `AUTHORIZATION: basic ${options.token}`
-    ])
+    await exec.exec(
+      'git',
+      ['config', '--local', 'http.https://github.com/.extraheader', `AUTHORIZATION: basic ${options.token}`],
+      execOption
+    )
   }
 
   const data = `# Lock File for actions-mutex
@@ -56,26 +56,50 @@ DO NOT TOUCH this branch manually.
   }
   await fs.writeFile(path.join(local, 'state.json'), JSON.stringify(state))
 
-  await exec.exec('git', ['-C', local, 'add', '.'])
-
   // configure user information
-  await exec.exec('git', ['-C', local, 'config', '--local', 'user.name', 'github-actions[bot]'])
-  await exec.exec('git', [
-    '-C',
-    local,
-    'config',
-    '--local',
-    'user.email',
-    '1898282+github-actions[bot]@users.noreply.github.com'
-  ])
+  await exec.exec('git', ['config', '--local', 'user.name', 'github-actions[bot]'], execOption)
+  await exec.exec(
+    'git',
+    ['config', '--local', 'user.email', '1898282+github-actions[bot]@users.noreply.github.com'],
+    execOption
+  )
 
-  await exec.exec('git', ['-C', local, 'commit', '-m', 'add lock files'])
-  await exec.exec('git', ['-C', local, 'push', 'origin', `HEAD:${branch}`])
+  // commit
+  await exec.exec('git', ['add', '.'], execOption)
+  await exec.exec('git', ['commit', '-m', 'add lock files'], execOption)
+
+  for (;;) {
+    const locked = await tryLock(local, branch)
+    if (locked) {
+      break
+    }
+    utils.sleep(1)
+  }
 
   // cleanup
   io.rmRF(local)
 
   return state
+}
+
+async function tryLock(local: string, branch: string): Promise<boolean> {
+  let stderr: string = ''
+  let code = await exec.exec('git', ['push', 'origin', `HEAD:${branch}`], {
+    cwd: local,
+    ignoreReturnCode: true,
+    listeners: {
+      stderr: data => {
+        stderr += data.toString()
+      }
+    }
+  })
+  if (code == 0) {
+    return true
+  }
+  if (stderr.includes('[rejected]')) {
+    return false
+  }
+  throw new Error('failed to git push: ' + code)
 }
 
 export async function unlock(): Promise<void> {}

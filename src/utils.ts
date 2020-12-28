@@ -1,4 +1,4 @@
-import * as fs from 'fs/promises'
+import {promises as fs} from 'fs'
 import * as os from 'os'
 import * as path from 'path'
 import * as crypto from 'crypto'
@@ -18,5 +18,11 @@ export async function random(): Promise<string> {
       }
       resolve(buf.toString('hex'))
     })
+  })
+}
+
+export async function sleep(waitSec: number): Promise<void> {
+  return new Promise<void>(function (resolve) {
+    setTimeout(() => resolve(), waitSec * 1000)
   })
 }
