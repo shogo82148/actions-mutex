@@ -75,7 +75,7 @@ DO NOT TOUCH this branch manually.
     const currentRepository = process.env['GITHUB_REPOSITORY']
     const currentRunId = process.env['GITHUB_RUN_ID']
     if (currentRepository && currentRunId) {
-      data += `- Workflow: [Workflow](${serverUrl})/${currentRepository}/actions/runs/${currentRunId})`
+      data += `- Workflow: [Workflow](${serverUrl}/${currentRepository}/actions/runs/${currentRunId})`
       data += '\n'
     }
     await fs.writeFile(path.join(this.local, 'README.md'), data)
