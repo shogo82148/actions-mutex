@@ -26,31 +26,69 @@ jobs:
           name: action
           path: ./
 
-  run:
+  job1:
     runs-on: ubuntu-latest
     needs: 'build'
-    strategy:
-      matrix:
-        num: [1, 2, 3, 4, 5, 6]
     outputs:
       result: ${{ steps.critical-section.outputs.result }}
     steps:
       - uses: actions/download-artifact@v2
         with:
           name: action
-
       - name: run the action
         uses: ./
-
       - id: critical-section
         name: critical section
         run: |
-          sleep 1
-          echo "::set-output name=result::${{ matrix.num }}"
+          START=$(date --rfc-3339=ns)
+          sleep 10
+          END=$(date --rfc-3339=ns)
+          echo "::set-output name=result::$START $END"
+
+  job2:
+    runs-on: ubuntu-latest
+    needs: 'build'
+    outputs:
+      result: ${{ steps.critical-section.outputs.result }}
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: action
+      - name: run the action
+        uses: ./
+      - id: critical-section
+        name: critical section
+        run: |
+          START=$(date --rfc-3339=ns)
+          sleep 10
+          END=$(date --rfc-3339=ns)
+          echo "::set-output name=result::$START $END"
+
+  job3:
+    runs-on: ubuntu-latest
+    needs: 'build'
+    outputs:
+      result: ${{ steps.critical-section.outputs.result }}
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: action
+      - name: run the action
+        uses: ./
+      - id: critical-section
+        name: critical section
+        run: |
+          START=$(date --rfc-3339=ns)
+          sleep 10
+          END=$(date --rfc-3339=ns)
+          echo "::set-output name=result::$START $END"
 
   validation:
     runs-on: ubuntu-latest
-    needs: 'run'
+    needs:
+      - job1
+      - job2
+      - job3
     steps:
       - run: echo TODO
         env:
