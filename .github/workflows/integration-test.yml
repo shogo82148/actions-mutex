@@ -40,9 +40,9 @@ jobs:
       - id: critical-section
         name: critical section
         run: |
-          START=$(date --rfc-3339=ns)
+          START=$(date --iso-8601=ns)
           sleep 10
-          END=$(date --rfc-3339=ns)
+          END=$(date --iso-8601=ns)
           echo "::set-output name=result::$START $END"
 
   job2:
@@ -59,9 +59,9 @@ jobs:
       - id: critical-section
         name: critical section
         run: |
-          START=$(date --rfc-3339=ns)
+          START=$(date --iso-8601=ns)
           sleep 10
-          END=$(date --rfc-3339=ns)
+          END=$(date --iso-8601=ns)
           echo "::set-output name=result::$START $END"
 
   job3:
@@ -78,9 +78,9 @@ jobs:
       - id: critical-section
         name: critical section
         run: |
-          START=$(date --rfc-3339=ns)
+          START=$(date --iso-8601=ns)
           sleep 10
-          END=$(date --rfc-3339=ns)
+          END=$(date --iso-8601=ns)
           echo "::set-output name=result::$START $END"
 
   validation:
@@ -90,6 +90,9 @@ jobs:
       - job2
       - job3
     steps:
-      - run: echo TODO
+      - run: |
+          echo "$JOB1\n$JOB2\n$JOB3" | sort | xargs -n1 echo | sort --check
         env:
-          NEEDS_CONTEXT: ${{ toJson(needs) }}
+          JOB1: ${{ needs.job1.outputs.result }}
+          JOB2: ${{ needs.job2.outputs.result }}
+          JOB3: ${{ needs.job3.outputs.result }}
