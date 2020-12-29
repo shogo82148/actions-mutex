@@ -63,7 +63,7 @@ describe('locking', () => {
     })
 
     // wait for trying to lock
-    await utils.sleep(2)
+    await utils.sleep(1)
     expect(locked).toBe(false)
 
     // unlock
