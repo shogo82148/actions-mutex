@@ -42,7 +42,8 @@ jobs:
       - name: run the action
         uses: ./
 
-      - name: critical section
+      - id: critical-section
+        name: critical section
         run: |
           sleep 1
           echo "::set-output name=result::${{ matrix.num }}"
