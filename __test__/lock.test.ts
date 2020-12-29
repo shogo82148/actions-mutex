@@ -36,43 +36,47 @@ describe('locking', () => {
     expect(output.trim()).toBe('actions-mutex-lock/lock')
   })
 
-  it('waits for unlocking', async () => {
-    // prepare dummy lock
-    const local = await utils.mkdtemp()
-    const execOption = {
-      cwd: local
-    }
-    await exec.exec('git', ['init', local], execOption)
-    await exec.exec('git', ['config', '--local', 'core.autocrlf', 'false'], execOption)
-    await exec.exec('git', ['remote', 'add', 'origin', remote], execOption)
-    await fs.writeFile(path.join(local, 'state.json'), JSON.stringify({}))
-    await exec.exec('git', ['add', '.'], execOption)
-    await exec.exec('git', ['config', '--local', 'user.name', '[bot]'], execOption)
-    await exec.exec('git', ['config', '--local', 'user.email', 'john@example.com'], execOption)
-    await exec.exec('git', ['commit', '-m', 'add lock files'], execOption)
-    await exec.exec('git', ['push', 'origin', 'HEAD:actions-mutex-lock/lock'], execOption)
+  it(
+    'waits for unlocking',
+    async () => {
+      // prepare dummy lock
+      const local = await utils.mkdtemp()
+      const execOption = {
+        cwd: local
+      }
+      await exec.exec('git', ['init', local], execOption)
+      await exec.exec('git', ['config', '--local', 'core.autocrlf', 'false'], execOption)
+      await exec.exec('git', ['remote', 'add', 'origin', remote], execOption)
+      await fs.writeFile(path.join(local, 'state.json'), JSON.stringify({}))
+      await exec.exec('git', ['add', '.'], execOption)
+      await exec.exec('git', ['config', '--local', 'user.name', '[bot]'], execOption)
+      await exec.exec('git', ['config', '--local', 'user.email', 'john@example.com'], execOption)
+      await exec.exec('git', ['commit', '-m', 'add lock files'], execOption)
+      await exec.exec('git', ['push', 'origin', 'HEAD:actions-mutex-lock/lock'], execOption)
 
-    let locked: boolean = false
-    const lockPromise = lock.lock({
-      repository: remote,
-      key: 'lock',
-      prefix: 'actions-mutex-lock/'
-    })
-    lockPromise.then(() => {
-      locked = true
-    })
+      let locked: boolean = false
+      const lockPromise = lock.lock({
+        repository: remote,
+        key: 'lock',
+        prefix: 'actions-mutex-lock/'
+      })
+      lockPromise.then(() => {
+        locked = true
+      })
 
-    // wait for trying to lock
-    await utils.sleep(1)
-    expect(locked).toBe(false)
+      // wait for trying to lock
+      await utils.sleep(1)
+      expect(locked).toBe(false)
 
-    // unlock
-    await exec.exec('git', ['push', '--delete', 'origin', 'actions-mutex-lock/lock'], execOption)
-    io.rmRF(local)
+      // unlock
+      await exec.exec('git', ['push', '--delete', 'origin', 'actions-mutex-lock/lock'], execOption)
+      io.rmRF(local)
 
-    await lockPromise
-    expect(locked).toBe(true)
-  })
+      await lockPromise
+      expect(locked).toBe(true)
+    },
+    10 * 1000
+  )
 
   it('unlocks', async () => {
     // prepare dummy lock
