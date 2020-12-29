@@ -50,7 +50,7 @@ class Locker {
 
     if (token) {
       // configure authorize header
-      const auth = Buffer.from(`${token}`).toString('base64')
+      const auth = Buffer.from(`x-oauth-basic:${token}`).toString('base64')
       core.setSecret(auth)
       await this.git('config', '--local', 'http.https://github.com/.extraheader', `AUTHORIZATION: basic ${auth}`)
     }
