@@ -5,6 +5,8 @@ import {promises as fs} from 'fs'
 import * as path from 'path'
 import * as utils from './utils'
 
+const serverUrl = process.env['GITHUB_SERVER_URL'] || 'https://github.com'
+
 export interface lockOptions {
   token?: string
   key: string
@@ -23,24 +25,27 @@ class Locker {
   local: string
   branch: string
   origin: string
+  key: string
 
-  private constructor(owner: string, local: string, branch: string, origin: string) {
+  private constructor(owner: string, local: string, branch: string, origin: string, key: string) {
     this.owner = owner
     this.local = local
     this.branch = branch
     this.origin = origin
+    this.key = key
   }
 
   static async create(options: lockOptions, state?: lockState): Promise<Locker> {
     const owner = state ? state.owner : await utils.random()
     const local = await utils.mkdtemp()
+    const key = options.key
     const branch = state ? state.branch : options.prefix + options.key
     let origin = state ? state.origin : options.repository
     if (/^[^/]+\/[^/]+$/.test(origin)) {
       // it looks that GitHub repository
-      origin = `https://github.com/${origin}`
+      origin = `${serverUrl}/${origin}`
     }
-    return new Locker(owner, local, branch, origin)
+    return new Locker(owner, local, branch, origin, key)
   }
 
   async init(token?: string): Promise<void> {
@@ -52,7 +57,7 @@ class Locker {
       // configure authorize header
       const auth = Buffer.from(`x-oauth-basic:${token}`).toString('base64')
       core.setSecret(auth) // make sure it's secret
-      await this.git('config', '--local', 'http.https://github.com/.extraheader', `AUTHORIZATION: basic ${auth}`)
+      await this.git('config', '--local', `http.${serverUrl}/.extraheader`, `AUTHORIZATION: basic ${auth}`)
     }
   }
 
@@ -60,11 +65,19 @@ class Locker {
     await this.init(token)
 
     // generate files
-    const data = `# Lock File for actions-mutex
+    let data = `# Lock File for actions-mutex
 
-    This branch contains lock file for [actions-mutex](https://github.com/shogo82148/actions-mutex).
-    DO NOT TOUCH this branch manually.
-    `
+The \`${this.branch}\` branch contains lock file for [actions-mutex](https://github.com/shogo82148/actions-mutex).
+DO NOT TOUCH this branch manually.
+
+- Key: ${this.key}
+`
+    const currentRepository = process.env['GITHUB_REPOSITORY']
+    const currentRunId = process.env['GITHUB_RUN_ID']
+    if (currentRepository && currentRunId) {
+      data += `- Workflow: [Workflow](${serverUrl})/${currentRepository}/actions/runs/${currentRunId})`
+      data += '\n'
+    }
     await fs.writeFile(path.join(this.local, 'README.md'), data)
 
     const state = {
