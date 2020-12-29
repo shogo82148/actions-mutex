@@ -31,6 +31,7 @@ export async function lock(options: lockOptions): Promise<lockResult> {
   }
 
   await exec.exec('git', ['init', local], execOption)
+  await exec.exec('git', ['config', '--local', 'core.autocrlf', 'false'], execOption)
   await exec.exec('git', ['remote', 'add', 'origin', origin], execOption)
 
   if (options.token) {
@@ -109,4 +110,4 @@ async function tryLock(local: string, branch: string): Promise<boolean> {
   throw new Error('failed to git push: ' + code)
 }
 
-export async function unlock(): Promise<void> {}
+export async function unlock(options: lockOptions, state: lockResult): Promise<void> {}

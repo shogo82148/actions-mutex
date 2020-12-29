@@ -43,6 +43,7 @@ describe('locking', () => {
       cwd: local
     }
     await exec.exec('git', ['init', local], execOption)
+    await exec.exec('git', ['config', '--local', 'core.autocrlf', 'false'], execOption)
     await exec.exec('git', ['remote', 'add', 'origin', remote], execOption)
     await fs.writeFile(path.join(local, 'state.json'), JSON.stringify({}))
     await exec.exec('git', ['add', '.'], execOption)
@@ -71,5 +72,40 @@ describe('locking', () => {
 
     await lockPromise
     expect(locked).toBe(true)
+  })
+
+  it('unlocks', async () => {
+    // prepare dummy lock
+    const local = await utils.mkdtemp()
+    const execOption = {
+      cwd: local
+    }
+    const state = {
+      locker: 'identity-of-locker',
+      origin: remote,
+      branch: 'actions-mutex-lock/lock'
+    }
+    await exec.exec('git', ['init', local], execOption)
+    await exec.exec('git', ['config', '--local', 'core.autocrlf', 'false'], execOption)
+    await exec.exec('git', ['remote', 'add', 'origin', remote], execOption)
+    await fs.writeFile(path.join(local, 'state.json'), JSON.stringify(state))
+    await exec.exec('git', ['add', '.'], execOption)
+    await exec.exec('git', ['config', '--local', 'user.name', '[bot]'], execOption)
+    await exec.exec('git', ['config', '--local', 'user.email', 'john@example.com'], execOption)
+    await exec.exec('git', ['commit', '-m', 'add lock files'], execOption)
+    await exec.exec('git', ['push', 'origin', 'HEAD:actions-mutex-lock/lock'], execOption)
+
+    await lock.unlock(
+      {
+        repository: remote,
+        key: 'lock',
+        prefix: 'actions-mutex-lock/'
+      },
+      {
+        locker: 'identity-of-locker',
+        origin: remote,
+        branch: 'actions-mutex-lock/lock'
+      }
+    )
   })
 })
