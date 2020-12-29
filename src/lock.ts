@@ -1,3 +1,4 @@
+import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as io from '@actions/io'
 import {promises as fs} from 'fs'
@@ -49,7 +50,9 @@ class Locker {
 
     if (token) {
       // configure authorize header
-      await this.git('config', '--local', 'http.https://github.com/.extraheader', `AUTHORIZATION: basic ${token}`)
+      const auth = Buffer.from(`x-oauth-basic:${token}`).toString('base64')
+      core.setSecret(auth) // make sure it's secret
+      await this.git('config', '--local', 'http.https://github.com/.extraheader', `AUTHORIZATION: basic ${auth}`)
     }
   }
 
@@ -113,7 +116,7 @@ class Locker {
     if (code == 0) {
       return true
     }
-    if (stderr.includes('[rejected]')) {
+    if (stderr.includes('[rejected]') || stderr.includes('[remote rejected]')) {
       return false
     }
     throw new Error('failed to git push: ' + code)
