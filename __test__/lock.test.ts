@@ -107,5 +107,16 @@ describe('locking', () => {
         branch: 'actions-mutex-lock/lock'
       }
     )
+
+    let output: string = ''
+    await exec.exec('git', ['-C', remote, 'branch'], {
+      listeners: {
+        stdout: (data: Buffer) => {
+          output += data.toString()
+        }
+      }
+    })
+
+    expect(output.trim()).toBe('')
   })
 })
