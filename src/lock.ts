@@ -1,3 +1,4 @@
+import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as io from '@actions/io'
 import {promises as fs} from 'fs'
@@ -49,7 +50,9 @@ class Locker {
 
     if (token) {
       // configure authorize header
-      await this.git('config', '--local', 'http.https://github.com/.extraheader', `AUTHORIZATION: basic ${token}`)
+      const auth = Buffer.from(`${token}:x-oauth-basic`).toString('base64')
+      core.setSecret(auth)
+      await this.git('config', '--local', 'http.https://github.com/.extraheader', `AUTHORIZATION: basic ${auth}`)
     }
   }
 
