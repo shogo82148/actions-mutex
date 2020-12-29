@@ -26,4 +26,8 @@ async function run() {
   )
 }
 
-run()
+try {
+  run()
+} catch (e) {
+  core.setFailed(e)
+}

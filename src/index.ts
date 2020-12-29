@@ -19,4 +19,8 @@ async function run() {
   core.saveState('STATE', JSON.stringify(state))
 }
 
-run()
+try {
+  run()
+} catch (e) {
+  core.setFailed(e)
+}
