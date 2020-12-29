@@ -119,4 +119,50 @@ describe('locking', () => {
 
     expect(output.trim()).toBe('')
   })
+
+  it('does not unlock the lock owned by another', async () => {
+    // prepare dummy lock
+    const local = await utils.mkdtemp()
+    const execOption = {
+      cwd: local
+    }
+    const state = {
+      owner: 'identity-of-another-owner',
+      origin: remote,
+      branch: 'actions-mutex-lock/lock'
+    }
+    await exec.exec('git', ['init', local], execOption)
+    await exec.exec('git', ['config', '--local', 'core.autocrlf', 'false'], execOption)
+    await exec.exec('git', ['remote', 'add', 'origin', remote], execOption)
+    await fs.writeFile(path.join(local, 'state.json'), JSON.stringify(state))
+    await exec.exec('git', ['add', '.'], execOption)
+    await exec.exec('git', ['config', '--local', 'user.name', '[bot]'], execOption)
+    await exec.exec('git', ['config', '--local', 'user.email', 'john@example.com'], execOption)
+    await exec.exec('git', ['commit', '-m', 'add lock files'], execOption)
+    await exec.exec('git', ['push', 'origin', 'HEAD:actions-mutex-lock/lock'], execOption)
+
+    await lock.unlock(
+      {
+        repository: remote,
+        key: 'lock',
+        prefix: 'actions-mutex-lock/'
+      },
+      {
+        owner: 'identity-of-the-owner',
+        origin: remote,
+        branch: 'actions-mutex-lock/lock'
+      }
+    )
+
+    let output: string = ''
+    await exec.exec('git', ['-C', remote, 'branch'], {
+      listeners: {
+        stdout: (data: Buffer) => {
+          output += data.toString()
+        }
+      }
+    })
+
+    expect(output.trim()).toBe('actions-mutex-lock/lock')
+  })
 })
