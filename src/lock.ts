@@ -11,103 +11,126 @@ export interface lockOptions {
   prefix: string
 }
 
-export interface lockResult {
+export interface lockState {
   locker: string
   origin: string
   branch: string
 }
 
-export async function lock(options: lockOptions): Promise<lockResult> {
-  const locker = await utils.random()
-  const branch = options.prefix + options.key
-  const local = await utils.mkdtemp()
-  let origin = options.repository
-  if (/^[^/]+\/[^/]+$/.test(origin)) {
-    // it looks that GitHub repository
-    origin = `https://github.com/${origin}`
-  }
-  const execOption = {
-    cwd: local
-  }
+class Locker {
+  locker: string
+  local: string
+  branch: string
+  origin: string
 
-  await exec.exec('git', ['init', local], execOption)
-  await exec.exec('git', ['config', '--local', 'core.autocrlf', 'false'], execOption)
-  await exec.exec('git', ['remote', 'add', 'origin', origin], execOption)
-
-  if (options.token) {
-    // configure authorize header
-    await exec.exec(
-      'git',
-      ['config', '--local', 'http.https://github.com/.extraheader', `AUTHORIZATION: basic ${options.token}`],
-      execOption
-    )
+  private constructor(locker: string, local: string, branch: string, origin: string) {
+    this.locker = locker
+    this.local = local
+    this.branch = branch
+    this.origin = origin
   }
 
-  const data = `# Lock File for actions-mutex
-
-This branch contains lock file for [actions-mutex](https://github.com/shogo82148/actions-mutex).
-DO NOT TOUCH this branch manually.
-`
-  await fs.writeFile(path.join(local, 'README.md'), data)
-
-  const state = {
-    locker,
-    origin,
-    branch
-  }
-  await fs.writeFile(path.join(local, 'state.json'), JSON.stringify(state))
-
-  // configure user information
-  await exec.exec('git', ['config', '--local', 'user.name', 'github-actions[bot]'], execOption)
-  await exec.exec(
-    'git',
-    ['config', '--local', 'user.email', '1898282+github-actions[bot]@users.noreply.github.com'],
-    execOption
-  )
-
-  // commit
-  await exec.exec('git', ['add', '.'], execOption)
-  await exec.exec('git', ['commit', '-m', 'add lock files'], execOption)
-
-  let sleepSec: number = 1
-  for (;;) {
-    const locked = await tryLock(local, branch)
-    if (locked) {
-      break
+  static async create(options: lockOptions): Promise<Locker> {
+    const locker = await utils.random()
+    const local = await utils.mkdtemp()
+    const branch = options.prefix + options.key
+    let origin = options.repository
+    if (/^[^/]+\/[^/]+$/.test(origin)) {
+      // it looks that GitHub repository
+      origin = `https://github.com/${origin}`
     }
-    await utils.sleep(sleepSec + Math.random())
+    return new Locker(locker, local, branch, origin)
+  }
 
-    // exponential back off
-    sleepSec *= 2
-    if (sleepSec > 30) {
-      sleepSec = 30
+  async init(token?: string): Promise<void> {
+    await this.git('init', this.local)
+    await this.git('config', '--local', 'core.autocrlf', 'false')
+    await this.git('remote', 'add', 'origin', this.origin)
+
+    if (token) {
+      // configure authorize header
+      await this.git('config', '--local', 'http.https://github.com/.extraheader', `AUTHORIZATION: basic ${token}`)
     }
   }
 
-  // cleanup
-  io.rmRF(local)
+  async lock(token?: string): Promise<lockState> {
+    await this.init(token)
 
-  return state
-}
+    // generate files
+    const data = `# Lock File for actions-mutex
 
-async function tryLock(local: string, branch: string): Promise<boolean> {
-  let stderr: string = ''
-  let code = await exec.exec('git', ['push', 'origin', `HEAD:${branch}`], {
-    cwd: local,
-    ignoreReturnCode: true,
-    listeners: {
-      stderr: data => {
-        stderr += data.toString()
+    This branch contains lock file for [actions-mutex](https://github.com/shogo82148/actions-mutex).
+    DO NOT TOUCH this branch manually.
+    `
+    await fs.writeFile(path.join(this.local, 'README.md'), data)
+
+    const state = {
+      locker: this.locker,
+      origin: this.origin,
+      branch: this.branch
+    }
+    await fs.writeFile(path.join(this.local, 'state.json'), JSON.stringify(state))
+
+    // configure user information
+    await this.git('config', '--local', 'user.name', 'github-actions[bot]')
+    await this.git('config', '--local', 'user.email', '1898282+github-actions[bot]@users.noreply.github.com')
+
+    // commit
+    await this.git('add', '.')
+    await this.git('commit', '-m', 'add lock files')
+
+    // try to lock
+    let sleepSec: number = 1
+    for (;;) {
+      const locked = await this.tryLock()
+      if (locked) {
+        break
+      }
+      await utils.sleep(sleepSec + Math.random())
+
+      // exponential back off
+      sleepSec *= 2
+      if (sleepSec > 30) {
+        sleepSec = 30
       }
     }
-  })
-  if (code == 0) {
-    return true
+
+    await this.cleanup()
+    return state
   }
-  if (stderr.includes('[rejected]')) {
-    return false
+
+  async tryLock(): Promise<boolean> {
+    let stderr: string = ''
+    let code = await exec.exec('git', ['push', 'origin', `HEAD:${this.branch}`], {
+      cwd: this.local,
+      ignoreReturnCode: true,
+      listeners: {
+        stderr: data => {
+          stderr += data.toString()
+        }
+      }
+    })
+    if (code == 0) {
+      return true
+    }
+    if (stderr.includes('[rejected]')) {
+      return false
+    }
+    throw new Error('failed to git push: ' + code)
   }
-  throw new Error('failed to git push: ' + code)
+
+  async git(...args: string[]): Promise<void> {
+    await exec.exec('git', args, {cwd: this.local})
+  }
+
+  async cleanup(): Promise<void> {
+    io.rmRF(this.local)
+  }
 }
 
-export async function unlock(options: lockOptions, state: lockResult): Promise<void> {}
+export async function lock(options: lockOptions): Promise<lockState> {
+  const locker = await Locker.create(options)
+  return locker.lock(options.token)
+}
+
+export async function unlock(options: lockOptions, state: lockState): Promise<void> {}
