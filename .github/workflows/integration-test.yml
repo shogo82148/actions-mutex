@@ -91,7 +91,7 @@ jobs:
       - job3
     steps:
       - run: |
-          echo "$JOB1\n$JOB2\n$JOB3" | sort | xargs -n1 echo | sort --check
+          { echo "$JOB1"; echo "$JOB2"; echo "$JOB3" } | sort | xargs -n1 echo | sort --check
         env:
           JOB1: ${{ needs.job1.outputs.result }}
           JOB2: ${{ needs.job2.outputs.result }}
