@@ -81,7 +81,7 @@ describe('locking', () => {
       cwd: local
     }
     const state = {
-      locker: 'identity-of-locker',
+      owner: 'identity-of-the-owner',
       origin: remote,
       branch: 'actions-mutex-lock/lock'
     }
@@ -102,7 +102,7 @@ describe('locking', () => {
         prefix: 'actions-mutex-lock/'
       },
       {
-        locker: 'identity-of-locker',
+        owner: 'identity-of-the-owner',
         origin: remote,
         branch: 'actions-mutex-lock/lock'
       }
