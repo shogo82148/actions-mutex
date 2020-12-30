@@ -12,7 +12,7 @@ A GitHub Action for exclusive control.
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   build:
