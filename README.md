@@ -48,6 +48,39 @@ The default is the repository that the workflow runs on.
 Prefix of branch names for locking.
 The default is "actions-mutex-lock/"
 
+## OFFICIAL CONCURRENCY SUPPORT ON GITHUB ACTIONS
+
+On April 19, 2021, GitHub launched beta support for limiting concurrency in the workflow files.
+
+- [GitHub Actions: Limit workflow run or job concurrency](https://github.blog/changelog/2021-04-19-github-actions-limit-workflow-run-or-job-concurrency/)
+
+Using this feature, the example in the SYNOPSIS section may be:
+
+```yaml
+on:
+  push:
+    branches:
+      - main
+
+# The job level concurrency
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
+concurrency: deploy
+
+jobs:
+  build:
+
+    # The job level concurrency
+    # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idconcurrency
+    concurrency: deploy
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: ': some jobs that can not run concurrently'
+```
+
+Note: Concurrency is currently in beta and subject to change. Please read the latest document of [Workflow syntax for GitHub Actions](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions).
+
 ## HOW THE ACTION WORKS
 
 As you known, Git rejects non-fast-forward updates.
