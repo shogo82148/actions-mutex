@@ -16,9 +16,10 @@ git clone "$ORIGIN" "$WORKING"
 cd "$WORKING"
 
 git checkout -b "releases/v$MAJOR" "origin/releases/v$MAJOR" || git checkout -b "releases/v$MAJOR" main
-git merge -X theirs -m "Merge branch 'main' into releases/v$MAJOR" main || true
+git merge --no-ff -X theirs -m "Merge branch 'main' into releases/v$MAJOR" main || true
 
 : update the version of package.json
+git checkout main -- package.json package-lock.json
 jq ".version=\"$MAJOR.$MINOR.$PATCH\"" < package.json > .tmp.json
 mv .tmp.json package.json
 jq ".version=\"$MAJOR.$MINOR.$PATCH\"" < package-lock.json > .tmp.json
