@@ -19,7 +19,11 @@ async function run() {
     })
     core.saveState('STATE', JSON.stringify(state))
   } catch (e) {
-    core.setFailed(e)
+    if (e instanceof Error) {
+      core.setFailed(e)
+    } else {
+      core.setFailed(`${e}`)
+    }
   }
 }
 

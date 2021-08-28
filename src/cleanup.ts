@@ -26,7 +26,11 @@ async function run() {
       state
     )
   } catch (e) {
-    core.setFailed(e)
+    if (e instanceof Error) {
+      core.setFailed(e)
+    } else {
+      core.setFailed(`${e}`)
+    }
   }
 }
 
