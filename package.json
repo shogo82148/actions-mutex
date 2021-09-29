@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/shogo82148/actions-mutex#readme",
   "dependencies": {
-    "@actions/core": "^1.5.0",
+    "@actions/core": "^1.6.0",
     "@actions/exec": "^1.1.0",
     "@actions/io": "^1.1.1"
   },
