@@ -3,6 +3,12 @@ import * as lock from './lock'
 
 async function run() {
   try {
+    core.warning(
+      'shogo82148/actions-mutex is no longer maintained. ' +
+        'Please consider use official support for limiting concurrency. ' +
+        'https://github.com/shogo82148/actions-mutex#official-concurrency-support-on-github-actions'
+    )
+
     const required = {
       required: true
     }
