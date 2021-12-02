@@ -79,7 +79,7 @@ jobs:
       - run: ': some jobs that can not run concurrently'
 ```
 
-Note: Concurrency is currently in beta and subject to change. Please read the latest document of [Workflow syntax for GitHub Actions](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions).
+Please read the latest document of [Workflow syntax for GitHub Actions](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions).
 
 ## HOW THE ACTION WORKS
 
