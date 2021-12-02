@@ -23,7 +23,7 @@ on:
     branches:
       - main
 
-# The job level concurrency
+# The workflow level concurrency
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency
 concurrency: deploy
 
